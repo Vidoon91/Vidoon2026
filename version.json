@@ -1,7 +1,0 @@
-{
-    "version":  "4.3",
-    "url":  "https://github.com/Vidoon91/vidoon-update/releases/download/latest/Vidoon2026_latest.zip",
-    "notes":  "新增Twitter平台的视频下载功能。",
-    "force":  false,
-    "sha256":  "4ee91f3a90fc20bf0e1c2ffae6b98bf22d5ffcd94b906fb055eaab2cb0ae7d82"
-}
