@@ -1,0 +1,14 @@
+{
+  "auth_mode": "account",
+  "token": "37eb478dcd31b1e884a25e967de6422e8ed4c4190d49e4ca75bba65845ee809f",
+  "email": "842635534@qq.com",
+  "phone": "",
+  "display_name": "842635534",
+  "account_level": "semiannual",
+  "account_level_label": "半年订阅",
+  "max_devices": 1,
+  "free_daily_limit": -1,
+  "today_download_count": 8,
+  "today_download_remaining": -1,
+  "expire_date": "2026-07-31 14:09:00"
+}
