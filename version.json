@@ -1,7 +1,7 @@
-﻿{
-    "version":  "4.4",
+{
+    "version":  "5.0",
     "url":  "https://github.com/Vidoon91/vidoon-update/releases/download/latest/Vidoon2026_latest.zip",
-    "notes":  "修复注册登录问题。",
+    "notes":  "2026.7.27增加邮箱验证，找回密码功能",
     "force":  false,
-    "sha256":  "a9b99a5bfef96d66dca034398a60d98bba78a024a4e3b3aedc2abe8342b8b8f8"
+    "sha256":  "7a376f89adb7609383d321e97960853f8ac29ea68b0a57709f1dd5a7245bafbf"
 }
