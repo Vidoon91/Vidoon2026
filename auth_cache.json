@@ -1,0 +1,38 @@
+{
+  "D595FC732FAB3895C5280BF0D1CD122017FBAFB23920C220D8008F6D59BBD59A_account_842635534@qq.com": {
+    "machine_code": "D595FC732FAB3895C5280BF0D1CD122017FBAFB23920C220D8008F6D59BBD59A",
+    "valid": true,
+    "expire_date": "2026-08-30 16:27:00",
+    "msg": "account_valid",
+    "status": "ok",
+    "auth_mode": "account",
+    "last_verify_time": "2026-07-30 17:25:03",
+    "cache_hours": 24,
+    "cache_minutes": 30,
+    "account": {
+      "status": "ok",
+      "valid": true,
+      "msg": "account_valid",
+      "user_id": 2,
+      "email": "842635534@qq.com",
+      "phone": "",
+      "display_name": "842635534",
+      "account_level": "monthly",
+      "account_level_label": "月订阅",
+      "max_devices": 1,
+      "per_task_limit": 50,
+      "daily_download_limit": 100,
+      "effective_daily_download_limit": 106,
+      "free_daily_limit": 100,
+      "quota_mode": "daily",
+      "free_credit_balance": 5,
+      "today_ad_reward_count": 6,
+      "today_download_count": 9,
+      "today_download_reserved": 0,
+      "today_download_remaining": 97,
+      "expire_date": "2026-08-30 16:27:00",
+      "user_status": 1,
+      "token": "499e5942de72638f24f4f38ae38eb0b196c2bbeadc2aa04c36bb60597a1df901"
+    }
+  }
+}

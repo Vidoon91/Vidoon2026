@@ -1,0 +1,29 @@
+{
+  "failures": [
+    {
+      "timestamp": "2025-12-29 15:19:28",
+      "url": "https://www.youtube.com/shorts/VPZGigDApNU",
+      "platform": "YouTube",
+      "download_type": "video",
+      "final_step": "STEP4",
+      "capabilities_used": [
+        "DENO",
+        "COOKIE",
+        "COOKIE_DENO",
+        "IP"
+      ],
+      "status_code": null,
+      "error_text": "",
+      "failure_reason": "所有兜底能力均失败"
+    }
+  ],
+  "stats": {
+    "YouTube_video": {
+      "total_failures": 1,
+      "by_reason": {
+        "所有兜底能力均失败": 1
+      },
+      "by_status_code": {}
+    }
+  }
+}
