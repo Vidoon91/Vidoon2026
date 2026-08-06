@@ -57,21 +57,48 @@ if ($scope === 'time' || $scope === 'all') {
         $expireAt = date('Y-m-d H:i:s', $timestamp);
     }
 
-    $accountLevel = $expireAt ? 'monthly' : 'free';
-    $status = $accountLevel === 'free' || strtotime($expireAt) >= time() ? 1 : 0;
-    $subscriptionStartAt = $expireAt ? (infer_user_subscription_start_at($user) ?: date('Y-m-d H:i:s')) : null;
+    $isExpired = $expireAt !== null && strtotime($expireAt) < time();
+    $currentLevel = normalize_account_level($user['account_level'] ?? 'free');
+    $accountLevel = ($expireAt === null || $isExpired)
+        ? 'free'
+        : (in_array($currentLevel, ['monthly', 'semiannual', 'annual'], true)
+            ? $currentLevel
+            : 'monthly');
+    if ($accountLevel === 'free') {
+        $expireAt = null;
+    }
+    $status = 1;
+    $subscriptionStartAt = $accountLevel === 'monthly'
+        ? (infer_user_subscription_start_at($user) ?: date('Y-m-d H:i:s'))
+        : null;
     $subscriptionMonths = 0;
+    $timeMaxDevices = $accountLevel === 'free'
+        ? 1
+        : max(1, intval($user['max_devices'] ?? 1));
 
     $updTime = $conn->prepare("
         UPDATE users
-        SET account_level = ?, status = ?, expire_at = ?, subscription_months = ?, subscription_start_at = ?, updated_at = NOW()
+        SET account_level = ?, status = ?, expire_at = ?, subscription_months = ?,
+            subscription_start_at = ?, max_devices = ?, updated_at = NOW()
         WHERE id = ?
     ");
-    $updTime->bind_param("sisisi", $accountLevel, $status, $expireAt, $subscriptionMonths, $subscriptionStartAt, $id);
+    $updTime->bind_param(
+        "sisisii",
+        $accountLevel,
+        $status,
+        $expireAt,
+        $subscriptionMonths,
+        $subscriptionStartAt,
+        $timeMaxDevices,
+        $id
+    );
     $updTime->execute();
 }
 
 if ($scope === 'device' || $scope === 'all') {
+    if ($scope === 'all' && isset($accountLevel) && $accountLevel === 'free') {
+        $maxDevices = 1;
+    }
     $updDevice = $conn->prepare("UPDATE users SET max_devices = ?, updated_at = NOW() WHERE id = ?");
     $updDevice->bind_param("ii", $maxDevices, $id);
     $updDevice->execute();

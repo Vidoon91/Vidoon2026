@@ -7,6 +7,7 @@ if (!isset($_SESSION['login'])) {
 
 require_once '../include/db.php';
 require_once '../include/account_helpers.php';
+require_once '../include/version_helpers.php';
 
 $conn = get_db_connection();
 ensure_user_subscription_columns($conn);
@@ -20,10 +21,15 @@ $siteSettingsReady = ensure_app_settings_table($conn, $siteSettingsError);
 $subscriptionUrl = $siteSettingsReady
     ? get_app_setting($conn, 'subscription_url', 'https://www.muyanshidai.com/')
     : 'https://www.muyanshidai.com/';
-$defaultDownloadUrl = 'https://github.com/Vidoon91/vidoon-update/releases/download/latest/Vidoon2026_latest.zip';
+$defaultDownloadUrl = 'https://github.com/Vidoon91/Vidoon2026/releases/latest/download/Vidoon2026_latest.zip';
 $downloadUrl = $siteSettingsReady
     ? get_app_setting($conn, 'download_url', $defaultDownloadUrl)
     : $defaultDownloadUrl;
+$downloadUrl = str_replace(
+    'https://github.com/Vidoon91/vidoon-update/releases/download/latest/Vidoon2026_latest.zip',
+    $defaultDownloadUrl,
+    $downloadUrl
+);
 $baiduDownloadUrl = $siteSettingsReady
     ? get_app_setting($conn, 'download_baidu_url', '')
     : '';
@@ -32,6 +38,13 @@ $quarkDownloadUrl = $siteSettingsReady
     : '';
 $siteSaved = ($_GET['site_saved'] ?? '') === '1';
 $siteError = trim((string)($_GET['site_error'] ?? ''));
+$versionLoadError = null;
+$versionConfig = load_public_version_config($conn, $versionLoadError);
+$versionSaved = ($_GET['version_saved'] ?? '') === '1';
+$versionError = trim((string)($_GET['version_error'] ?? ''));
+if (empty($_SESSION['version_settings_csrf'])) {
+    $_SESSION['version_settings_csrf'] = bin2hex(random_bytes(24));
+}
 
 $condition = " WHERE 1=1 ";
 if ($q !== '') {
@@ -324,6 +337,39 @@ function confirmAccountAction(form) {
             直链、百度网盘和夸克网盘地址可独立替换；网盘链接留空时首页不显示
         <?php endif; ?>
     </div>
+
+    <section class="mt-5 grid gap-3 xl:grid-cols-[150px_minmax(0,1fr)] xl:items-start">
+        <div>
+            <h2 class="text-lg font-black tracking-tight text-ink">版本更新</h2>
+            <div class="mt-1 text-xs leading-5 text-slate-500">客户端读取服务器版本接口</div>
+        </div>
+        <div>
+            <form action="update_version_settings.php" method="post" class="grid min-w-0 gap-3 rounded-2xl bg-white/90 p-4 shadow-sm ring-1 ring-slate-200/80 md:grid-cols-[220px_minmax(0,1fr)]">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars((string)$_SESSION['version_settings_csrf'], ENT_QUOTES, 'UTF-8') ?>">
+                <label for="update_version" class="grid min-w-0 gap-1 text-xs font-bold text-ink">
+                    <span class="pl-1">最新版本号</span>
+                    <input id="update_version" name="version" value="<?= htmlspecialchars((string)$versionConfig['version'], ENT_QUOTES, 'UTF-8') ?>" required placeholder="5.1" class="min-w-0 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs font-normal outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100/70">
+                </label>
+                <label for="update_notes" class="grid min-w-0 gap-1 text-xs font-bold text-ink">
+                    <span class="pl-1">更新内容</span>
+                    <textarea id="update_notes" name="notes" rows="3" maxlength="3000" placeholder="填写本次更新内容" class="min-w-0 resize-y rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs font-normal leading-5 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100/70"><?= htmlspecialchars((string)$versionConfig['notes'], ENT_QUOTES, 'UTF-8') ?></textarea>
+                </label>
+                <div class="flex items-center justify-between gap-3 md:col-span-2">
+                    <span class="text-xs <?= $versionError !== '' || $versionLoadError !== null ? 'text-rose-500' : ($versionSaved ? 'text-emerald-600' : 'text-slate-400') ?>">
+                        <?php if ($versionError === 'invalid_version'): ?>版本号格式不正确，例如 5.1 或 5.1.0
+                        <?php elseif ($versionError === 'invalid_request'): ?>页面已过期，请刷新后台后重新保存
+                        <?php elseif ($versionError === 'notes_too_long'): ?>更新内容不能超过 3000 个字符
+                        <?php elseif ($versionError !== ''): ?>保存失败，请检查数据库 app_settings 表权限
+                        <?php elseif ($versionLoadError !== null): ?>版本配置读取失败，请检查数据库权限
+                        <?php elseif ($versionSaved): ?>版本信息已保存，客户端检查更新时立即生效
+                        <?php else: ?>保存后客户端检查更新时立即读取最新设置
+                        <?php endif; ?>
+                    </span>
+                    <button type="submit" class="shrink-0 rounded-xl bg-ocean px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-cyan-700">保存版本信息</button>
+                </div>
+            </form>
+        </div>
+    </section>
 
     <div class="mt-4 space-y-4 lg:hidden">
         <?php if ($res && $res->num_rows > 0): ?>

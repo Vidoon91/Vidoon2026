@@ -17,8 +17,8 @@ function ad_config_defaults() {
         'ad_manager_network_code' => '',
         'rewarded_ad_unit_path' => '',
         'reward_count' => 3,
-        'daily_view_limit' => 5,
-        'cooldown_seconds' => 120,
+        'daily_view_limit' => 0,
+        'cooldown_seconds' => 600,
     ];
 }
 
@@ -30,6 +30,23 @@ function get_ad_config(mysqli $conn) {
     }
 
     $legacyEnabled = get_app_setting($conn, 'ads_enabled', '0');
+    if (get_app_setting($conn, 'ads_reward_rules_v2_migrated', '0') !== '1') {
+        $migrationError = null;
+        $rulesMigrated = set_app_setting(
+            $conn,
+            'ads_daily_view_limit',
+            '0',
+            $migrationError
+        ) && set_app_setting(
+            $conn,
+            'ads_cooldown_seconds',
+            '600',
+            $migrationError
+        );
+        if ($rulesMigrated) {
+            set_app_setting($conn, 'ads_reward_rules_v2_migrated', '1', $migrationError);
+        }
+    }
 
     return [
         // Preserve the existing ordinary-ad state while keeping rewarded ads off
@@ -58,7 +75,7 @@ function get_ad_config(mysqli $conn) {
             'ads_reward_count',
             (string)$defaults['reward_count']
         )))),
-        'daily_view_limit' => max(1, min(50, intval(get_app_setting(
+        'daily_view_limit' => max(0, min(1000, intval(get_app_setting(
             $conn,
             'ads_daily_view_limit',
             (string)$defaults['daily_view_limit']
@@ -73,6 +90,25 @@ function get_ad_config(mysqli $conn) {
 
 function ad_display_is_enabled(array $config) {
     return !empty($config['display_enabled']);
+}
+
+function ad_publisher_client_id(array $config) {
+    $publisherId = trim((string)($config['publisher_id'] ?? ''));
+    if (preg_match('/^(?:ca-)?(pub-\d+)$/', $publisherId, $match)) {
+        return 'ca-' . $match[1];
+    }
+    return '';
+}
+
+function render_ad_publisher_loader(array $config) {
+    $publisherId = ad_publisher_client_id($config);
+    if ($publisherId === '') {
+        return;
+    }
+    $escapedId = htmlspecialchars($publisherId, ENT_QUOTES, 'UTF-8');
+    echo '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client='
+        . $escapedId
+        . '" crossorigin="anonymous"></script>';
 }
 
 function ad_reward_is_ready(array $config) {
@@ -142,7 +178,7 @@ function create_ad_reward_session(
 
     $todayClaimCount = ad_reward_today_claim_count($conn, $userId);
     $dailyLimit = intval($config['daily_view_limit']);
-    if ($todayClaimCount >= $dailyLimit) {
+    if ($dailyLimit > 0 && $todayClaimCount >= $dailyLimit) {
         $errorCode = 'ad_reward_daily_limit_reached';
         $details = [
             'today_reward_views' => $todayClaimCount,

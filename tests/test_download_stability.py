@@ -4,6 +4,7 @@ import tempfile
 import threading
 import time
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -241,6 +242,22 @@ class DownloadQuotaSettlementTests(unittest.TestCase):
 
 
 class AdRewardClientTests(unittest.TestCase):
+    @patch("main.webbrowser.open")
+    def test_client_reward_button_opens_homepage_entry(self, browser_open):
+        page = SimpleNamespace(
+            _ad_reward_enabled=False,
+            _is_ad_reward_account_eligible=lambda: self.fail(
+                "client account state must not be checked before opening the homepage"
+            ),
+            log_handler=SimpleNamespace(log=lambda _message: None),
+        )
+
+        VideoDownloader.open_ad_reward(page)
+
+        browser_open.assert_called_once_with(
+            "https://license.muyanshidai.com/index.php"
+        )
+
     def test_reward_eligibility_is_limited_to_free_accounts(self):
         free_page = SimpleNamespace(
             authorized=True,
@@ -259,11 +276,23 @@ class AdRewardClientTests(unittest.TestCase):
                 VideoDownloader._is_ad_reward_account_eligible(paid_page)
             )
 
-    def test_reward_eligibility_requires_login(self):
+    def test_reward_entry_allows_web_login_when_client_is_logged_out(self):
         page = SimpleNamespace(authorized=False, account_info={})
-        self.assertFalse(
+        self.assertTrue(
             VideoDownloader._is_ad_reward_account_eligible(page)
         )
+
+    def test_successful_reward_clears_web_login_state(self):
+        endpoint = (
+            Path(__file__).resolve().parents[1]
+            / "license"
+            / "claim_ad_reward.php"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("function reward_clear_web_login()", endpoint)
+        self.assertIn("member_logout_session();", endpoint)
+        self.assertEqual(endpoint.count("reward_clear_web_login();"), 2)
+        self.assertGreaterEqual(endpoint.count("'web_login_cleared' => true"), 2)
 
     @patch("shouquan.platform.node", return_value="desktop-1")
     @patch("shouquan._post_api")
@@ -326,6 +355,28 @@ class AdRewardClientTests(unittest.TestCase):
         payload = post_api.call_args.args[0]
         self.assertEqual(payload["action"], "ad_reward_status")
         self.assertEqual(payload["reward_token"], "reward-1")
+
+
+class SiteHeaderTests(unittest.TestCase):
+    def test_public_pages_use_shared_navigation(self):
+        project_root = Path(__file__).resolve().parents[1]
+        pages = (
+            "index.php",
+            "features.php",
+            "download.php",
+            "subscribe.php",
+            "member_login.php",
+            "register.php",
+            "reward.php",
+            "payment.php",
+            "manual_payment.php",
+        )
+
+        for page in pages:
+            source = (project_root / "license" / page).read_text(encoding="utf-8")
+            with self.subTest(page=page):
+                self.assertIn("include/site_header.php", source)
+                self.assertIn("render_site_header(", source)
 
 
 class FreeCreditDisplayTests(unittest.TestCase):

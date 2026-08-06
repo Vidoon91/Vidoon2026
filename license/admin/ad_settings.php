@@ -12,7 +12,7 @@ $config = get_ad_config($conn);
 $rewardShareUrl = rtrim((string)get_runtime_site_value(
     'base_url',
     'https://license.muyanshidai.com/'
-), '/') . '/reward.php';
+), '/') . '/reward_watch.php';
 $saved = ($_GET['saved'] ?? '') === '1';
 $error = trim((string)($_GET['error'] ?? ''));
 if (empty($_SESSION['ads_csrf'])) {
@@ -53,7 +53,7 @@ textarea.field{min-height:180px;resize:vertical;font-family:Consolas,monospace;l
         <nav class="flex flex-wrap gap-2">
             <a href="users.php" class="rounded-xl border bg-white px-4 py-2 text-sm font-semibold">账号管理</a>
             <a href="payment_settings.php" class="rounded-xl border bg-white px-4 py-2 text-sm font-semibold">支付配置</a>
-            <a href="../reward.php" target="_blank" class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-ocean">预览领取页</a>
+            <a href="../reward_watch.php" target="_blank" class="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-ocean">预览领取页</a>
             <a href="logout.php" class="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white">退出登录</a>
         </nav>
     </header>
@@ -85,7 +85,7 @@ textarea.field{min-height:180px;resize:vertical;font-family:Consolas,monospace;l
         <section class="rounded-3xl bg-white p-5 shadow-lg ring-1 ring-slate-200">
             <div>
                 <h2 class="text-lg font-black text-ink">AdSense 发布商信息</h2>
-                <p class="mt-1 text-xs text-slate-500">发布商 ID 同时用于普通广告和 AdSense 积分墙，请在 AdSense 后台把积分墙定向到 reward.php。</p>
+                <p class="mt-1 text-xs text-slate-500">发布商 ID 用于网站公开页面加载 AdSense。广告按 Google 的全站规则独立展示，不参与免费额度判断。</p>
             </div>
             <div class="mt-5 grid gap-4 md:grid-cols-2">
                 <label class="text-xs font-semibold text-slate-600">AdSense 发布商 ID
@@ -125,13 +125,13 @@ textarea.field{min-height:180px;resize:vertical;font-family:Consolas,monospace;l
                 <textarea class="field mt-4" name="home_right_code" spellcheck="false" placeholder="<script>...</script>"><?= ads_admin_e($config['home_right_code']) ?></textarea>
             </div>
             <div class="rounded-3xl bg-white p-5 shadow-lg ring-1 ring-slate-200">
-                <h2 class="text-lg font-black text-ink">首页下载模块下方广告代码</h2>
-                <p class="mt-1 text-xs text-slate-500">显示在 Windows 与 macOS 下载卡片正下方，建议使用横向或响应式普通 AdSense 广告位。</p>
+                <h2 class="text-lg font-black text-ink">软件下载页内容广告代码</h2>
+                <p class="mt-1 text-xs text-slate-500">显示在软件下载页的 Windows 与 macOS 下载卡片下方，建议使用横向或响应式普通 AdSense 广告位。</p>
                 <textarea class="field mt-4" name="home_download_code" spellcheck="false" placeholder="<script>...</script>"><?= ads_admin_e($config['home_download_code']) ?></textarea>
             </div>
             <div class="rounded-3xl bg-white p-5 shadow-lg ring-1 ring-slate-200">
-                <h2 class="text-lg font-black text-ink">官网首页底部广告代码</h2>
-                <p class="mt-1 text-xs text-slate-500">显示在首页主要内容下方，建议使用横向或响应式普通 AdSense 广告位。</p>
+                <h2 class="text-lg font-black text-ink">网站流程底部广告代码</h2>
+                <p class="mt-1 text-xs text-slate-500">显示在官网首页、会员登录、会员注册和免费额度领取页底部；窄屏隐藏左右广告后，该广告位继续保留。</p>
                 <textarea class="field mt-4" name="home_bottom_code" spellcheck="false" placeholder="<script>...</script>"><?= ads_admin_e($config['home_bottom_code']) ?></textarea>
             </div>
         </section>
@@ -143,14 +143,15 @@ textarea.field{min-height:180px;resize:vertical;font-family:Consolas,monospace;l
                     <input class="field mt-1.5" type="number" min="1" max="100" name="reward_count" value="<?= intval($config['reward_count']) ?>">
                 </label>
                 <label class="text-xs font-semibold text-slate-600">每账号每日最多领取
-                    <input class="field mt-1.5" type="number" min="1" max="50" name="daily_view_limit" value="<?= intval($config['daily_view_limit']) ?>">
+                    <input class="field mt-1.5" type="number" min="0" max="1000" name="daily_view_limit" value="<?= intval($config['daily_view_limit']) ?>">
+                    <span class="mt-1 block text-[11px] font-normal text-slate-400">填写 0 表示不限制每日领取次数</span>
                 </label>
                 <label class="text-xs font-semibold text-slate-600">两次领取间隔（秒）
                     <input class="field mt-1.5" type="number" min="30" max="86400" name="cooldown_seconds" value="<?= intval($config['cooldown_seconds']) ?>">
                 </label>
             </div>
             <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-800">
-                客户端可携带账号凭证直接进入领取页；网页分享链接会先要求会员登录或注册。用户完成 AdSense 积分墙激励广告并解锁页面后，再由服务器校验每日上限、领取间隔和一次性凭证并发放额度。
+                客户端只打开官网首页，不携带账号状态。用户从首页进入领取流程并登录后，点击领取并等待 10 秒；服务器校验 10 分钟冷却时间和一次性凭证后发放额度。AdSense 广告与该流程互不影响。
             </div>
         </section>
 

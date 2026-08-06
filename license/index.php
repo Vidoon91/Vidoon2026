@@ -1,27 +1,15 @@
 <?php
 require_once __DIR__ . '/include/payment_helpers.php';
 require_once __DIR__ . '/include/ad_helpers.php';
+require_once __DIR__ . '/include/site_header.php';
 
 $conn = get_db_connection();
 $schemaError = null;
 $schemaReady = ensure_payment_schema($conn, $schemaError);
 $planRows = [];
-$defaultDownloadUrl = 'https://github.com/Vidoon91/vidoon-update/releases/download/latest/Vidoon2026_latest.zip';
-$downloadUrl = $defaultDownloadUrl;
-$baiduDownloadUrl = '';
-$quarkDownloadUrl = '';
 $adConfig = get_ad_config($conn);
 $adDisplayEnabled = ad_display_is_enabled($adConfig);
 $adRewardReady = ad_reward_is_ready($adConfig);
-$rewardEntryReady = (
-    preg_match('/^[a-f0-9]{64}$/', (string)($_COOKIE['vidoon_free_reward'] ?? '')) === 1
-);
-$siteSettingsError = null;
-if (ensure_app_settings_table($conn, $siteSettingsError)) {
-    $downloadUrl = get_app_setting($conn, 'download_url', $defaultDownloadUrl);
-    $baiduDownloadUrl = get_app_setting($conn, 'download_baidu_url', '');
-    $quarkDownloadUrl = get_app_setting($conn, 'download_quark_url', '');
-}
 if ($schemaReady) {
     $plans = $conn->query("
         SELECT plan_code, plan_name, duration_days, price_cents, description
@@ -48,6 +36,7 @@ function home_e($value) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Vidoon 视频素材管理工具，支持多平台素材提取、批量任务、Cookie 状态检查与账号订阅同步。">
 <meta name="color-scheme" content="light">
+<?php render_ad_publisher_loader($adConfig); ?>
 <title>Vidoon 视频素材管理工具</title>
 <style>
 :root {
@@ -156,8 +145,6 @@ a { color: inherit; text-decoration: none; }
 }
 .home-bottom-ad { min-height: 110px; margin: 34px 0 0; }
 .home-bottom-ad .adsbygoogle { display: block !important; width: 100% !important; min-height: 70px; }
-.home-download-ad { min-height: 110px; margin: 24px 0 0; }
-.home-download-ad .adsbygoogle { display: block !important; width: 100% !important; min-height: 70px; }
 .home-ad.ad-empty { visibility: hidden; }
 .home-ad.unfilled { visibility: hidden; }
 .product {
@@ -218,31 +205,6 @@ a { color: inherit; text-decoration: none; }
 .feature-conversion strong { display: block; font-size: 17px; }
 .feature-conversion p { margin: 5px 0 0; color: var(--muted); font-size: 14px; }
 .feature-conversion .actions { flex: 0 0 auto; margin-top: 0; }
-.download-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-.download-card { overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: rgba(255,255,255,.88); box-shadow: 0 16px 38px rgba(50,80,98,.08); }
-.download-card[open] { border-color: #a7d7e2; box-shadow: 0 20px 45px rgba(50,80,98,.12); }
-.download-card summary { display: flex; align-items: center; gap: 15px; padding: 21px; cursor: pointer; list-style: none; user-select: none; }
-.download-card summary::-webkit-details-marker { display: none; }
-.os-mark { display: grid; width: 47px; height: 47px; flex: 0 0 47px; place-items: center; border-radius: 15px; color: #fff; background: linear-gradient(145deg,#2867ad,#173f72 50%,#0c203c); font-size: 12px; font-weight: 900; letter-spacing: .04em; }
-.os-mark.mac { color: var(--ink); background: linear-gradient(145deg,#fff,#dce8ed); box-shadow: inset 0 0 0 1px #d5e2e7; }
-.os-title { flex: 1; }.os-title strong { display: block; font-size: 17px; }.os-title span { display: block; margin-top: 5px; color: var(--muted); font-size: 14px; }
-.download-state { border-radius: 999px; padding: 6px 9px; color: #087758; background: #e6f8f1; font-size: 12px; font-weight: 900; }
-.download-state.soon { color: #7c5b16; background: #fff5d9; }
-.chevron { width: 9px; height: 9px; border-right: 2px solid #75899b; border-bottom: 2px solid #75899b; transform: rotate(45deg); transition: transform .2s ease; }
-.download-card[open] .chevron { transform: rotate(225deg); }
-.download-body { border-top: 1px solid #e4edef; padding: 20px 21px 22px; }
-.requirements { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.requirement { border-radius: 11px; background: #f2f7f9; padding: 10px; }.requirement b { display: block; color: #718596; font-size: 12px; letter-spacing: .08em; }.requirement span { display: block; margin-top: 5px; font-size: 14px; font-weight: 900; }
-.download-note { margin: 14px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
-.download-button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; margin-top: 15px; border-radius: 11px; padding: 0 17px; color: #fff; background: var(--ocean); font-size: 14px; font-weight: 900; box-shadow: 0 9px 20px rgba(7,136,174,.18); }
-.download-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
-.download-actions .download-button { margin-top: 0; }
-.download-button.baidu { background: #2468f2; box-shadow: 0 9px 20px rgba(36,104,242,.18); }
-.download-button.quark { background: #14a67a; box-shadow: 0 9px 20px rgba(20,166,122,.18); }
-.download-button.is-starting { opacity: .72; pointer-events: none; }
-.download-button.disabled { color: #8193a1; background: #e3ecef; box-shadow: none; cursor: not-allowed; }
-.download-toast { position: fixed; z-index: 2000; top: 82px; left: 50%; width: min(420px, calc(100% - 32px)); transform: translate(-50%, -16px); border: 1px solid #9edbe8; border-radius: 14px; padding: 13px 17px; color: #075b72; background: rgba(239,252,255,.97); box-shadow: 0 18px 45px rgba(15,50,68,.2); font-size: 14px; font-weight: 800; line-height: 1.5; opacity: 0; visibility: hidden; transition: opacity .2s ease, transform .2s ease, visibility .2s ease; }
-.download-toast.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
 .plan-area { border-radius: 32px; background: var(--ink); padding: 48px; color: #fff; }
 .plan-area .section-head { margin-bottom: 25px; }.plan-area .section-head p { color: #a9b8c9; }
 .plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -272,7 +234,6 @@ footer { display: flex; align-items: center; justify-content: space-between; min
     .product { max-width: 620px; margin: 0 auto; }
     .intro-panel { grid-template-columns: 1fr; gap: 20px; margin-top: 0; }
     .features { grid-template-columns: 1fr; }
-    .download-grid { grid-template-columns: 1fr; }
     .plans { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 1500px) {
@@ -292,7 +253,6 @@ footer { display: flex; align-items: center; justify-content: space-between; min
     .closing { align-items: start; flex-direction: column; margin: 50px 0; }
     .free-reward-banner { align-items: flex-start; flex-direction: column; padding: 28px 24px; }
     .free-reward-button { width: 100%; }
-    .requirements { grid-template-columns: 1fr; }
     .intro-capabilities { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) {
@@ -307,20 +267,7 @@ footer { display: flex; align-items: center; justify-content: space-between; min
 </style>
 </head>
 <body>
-<header class="shell nav">
-    <a class="brand" href="index.php">
-        <span class="brand-mark">V</span>
-        <span>Vidoon<small>VIDEO WORKSPACE</small></span>
-    </a>
-    <nav class="nav-links">
-        <a href="#features">产品功能</a>
-        <a href="#download">软件下载</a>
-        <a href="#plans">订阅套餐</a>
-        <a href="#steps">使用流程</a>
-        <a href="register.php">会员注册</a>
-        <a class="nav-cta" href="subscribe.php">立即订阅</a>
-    </nav>
-</header>
+<?php render_site_header('home'); ?>
 
 <main class="home-layout">
     <aside class="home-ad home-side-ad<?= !$adDisplayEnabled || trim((string)$adConfig['home_left_code']) === '' ? ' ad-empty' : '' ?>" aria-label="首页左侧广告">
@@ -334,7 +281,7 @@ footer { display: flex; align-items: center; justify-content: space-between; min
             <p class="hero-copy">为短视频创作者打造的一站式素材工作台。集中处理多平台链接、批量下载任务、Cookie 状态和素材预览，让重复操作更少，让创作流程更顺畅。</p>
             <div class="actions">
                 <a class="button primary" href="subscribe.php">查看订阅套餐</a>
-                <a class="button secondary" href="#features">查看核心下载优势</a>
+                <a class="button secondary" href="features.php">了解产品功能</a>
             </div>
             <div class="facts"><span>多平台素材处理</span><span>批量任务管理</span><span>账号权益同步</span></div>
         </div>
@@ -388,65 +335,10 @@ footer { display: flex; align-items: center; justify-content: space-between; min
         <div class="feature-conversion">
             <div><strong>不确定是否适合？先从实际下载体验开始</strong><p><?= $adRewardReady ? '注册免费订阅，首次额度用完后还可到官网免费领取下载次数。' : '注册免费订阅可获得首次下载额度，体验后再决定是否长期订阅。' ?></p></div>
             <div class="actions">
-                <a class="button secondary" href="#download">先下载软件</a>
+                <a class="button secondary" href="download.php">先下载软件</a>
                 <a class="button primary" href="subscribe.php">查看体验套餐</a>
             </div>
         </div>
-    </section>
-
-    <section class="shell section" id="download">
-        <div class="section-head">
-            <div><small>DOWNLOAD</small><h2>下载 Vidoon 桌面版</h2></div>
-            <p>选择与电脑系统对应的版本。Windows 版现已开放下载，macOS 版完成适配后将在这里提供。</p>
-        </div>
-        <div class="download-grid">
-            <details class="download-card" open>
-                <summary>
-                    <span class="os-mark">WIN</span>
-                    <span class="os-title"><strong>Windows 版</strong><span>适用于 Windows 10 / 11 64 位系统</span></span>
-                    <span class="download-state">可下载</span>
-                    <i class="chevron"></i>
-                </summary>
-                <div class="download-body">
-                    <div class="requirements">
-                        <div class="requirement"><b>系统</b><span>Windows 10 / 11</span></div>
-                        <div class="requirement"><b>架构</b><span>64 位</span></div>
-                        <div class="requirement"><b>安装方式</b><span>解压后使用</span></div>
-                    </div>
-                    <p class="download-note">下载完成后解压到独立文件夹，直接使用新版本；不要覆盖旧目录，确认正常后再删除旧版本。</p>
-                    <div class="download-actions">
-                        <a class="download-button js-direct-download" href="<?= home_e($downloadUrl) ?>" target="_blank" rel="noopener noreferrer">下载 Windows 版</a>
-                        <?php if ($baiduDownloadUrl !== ''): ?>
-                            <a class="download-button baidu" href="<?= home_e($baiduDownloadUrl) ?>" target="_blank" rel="noopener noreferrer">百度网盘</a>
-                        <?php endif; ?>
-                        <?php if ($quarkDownloadUrl !== ''): ?>
-                            <a class="download-button quark" href="<?= home_e($quarkDownloadUrl) ?>" target="_blank" rel="noopener noreferrer">夸克网盘</a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </details>
-
-            <details class="download-card">
-                <summary>
-                    <span class="os-mark mac">macOS</span>
-                    <span class="os-title"><strong>macOS 版</strong><span>面向 Apple 芯片与 Intel Mac 的规划版本</span></span>
-                    <span class="download-state soon">即将推出</span>
-                    <i class="chevron"></i>
-                </summary>
-                <div class="download-body">
-                    <div class="requirements">
-                        <div class="requirement"><b>系统</b><span>macOS</span></div>
-                        <div class="requirement"><b>架构</b><span>Apple / Intel</span></div>
-                        <div class="requirement"><b>当前状态</b><span>正在适配</span></div>
-                    </div>
-                    <p class="download-note">当前项目中尚未提供 macOS 安装包。完成兼容性测试并上传正式文件后，这里将开放下载。</p>
-                    <span class="download-button disabled" aria-disabled="true">macOS 版即将推出</span>
-                </div>
-            </details>
-        </div>
-        <?php if ($adDisplayEnabled && trim((string)$adConfig['home_download_code']) !== ''): ?>
-            <aside class="home-ad home-download-ad" aria-label="下载软件模块下方广告"><?= $adConfig['home_download_code'] ?></aside>
-        <?php endif; ?>
     </section>
 
     <section class="shell plan-area" id="plans">
@@ -514,9 +406,9 @@ footer { display: flex; align-items: center; justify-content: space-between; min
             <div class="free-reward-copy">
                 <small>FREE DOWNLOAD CREDITS</small>
                 <h2>免费领取下载额度</h2>
-                <p><?= $rewardEntryReady ? '客户端账号凭证已准备好，完成积分墙激励广告后即可领取。' : '可从客户端直接进入，也可在网页登录或注册会员账号后领取。' ?></p>
+                <p>点击后先登录或注册 Vidoon 账号，进入领取页等待 10 秒核对规则，符合 10 分钟领取间隔即可到账。</p>
             </div>
-            <a class="free-reward-button" href="reward.php"><?= $rewardEntryReady ? '前往领取额度' : '登录并免费领取' ?></a>
+            <a class="free-reward-button" href="member_login.php?return=reward_watch">登录或注册后领取</a>
         </section>
     <?php endif; ?>
     <?php if ($adDisplayEnabled && trim((string)$adConfig['home_bottom_code']) !== ''): ?>
@@ -528,62 +420,13 @@ footer { display: flex; align-items: center; justify-content: space-between; min
     </aside>
 </main>
 
-<div class="download-toast" id="download-toast" role="status" aria-live="polite"></div>
-
 <footer class="shell">
     <span>© <?= date('Y') ?> Vidoon 视频素材管理工具</span>
     <span>请仅处理您有权下载和使用的内容</span>
 </footer>
-<script>
-(() => {
-    const button = document.querySelector('.js-direct-download');
-    const toast = document.getElementById('download-toast');
-    if (!button || !toast) {
-        return;
-    }
-
-    let toastTimer = null;
-    button.addEventListener('click', event => {
-        event.preventDefault();
-        if (button.classList.contains('is-starting')) {
-            return;
-        }
-
-        button.classList.add('is-starting');
-        button.setAttribute('aria-busy', 'true');
-        toast.textContent = '正在开始下载，请稍候查看浏览器下载列表。若未自动开始，可使用百度网盘或夸克网盘。';
-        toast.classList.add('show');
-
-        const downloadFrame = document.createElement('iframe');
-        downloadFrame.setAttribute('title', '软件下载');
-        downloadFrame.setAttribute('aria-hidden', 'true');
-        Object.assign(downloadFrame.style, {
-            position: 'fixed',
-            left: '-9999px',
-            top: '-9999px',
-            width: '1px',
-            height: '1px',
-            border: '0',
-            opacity: '0',
-            pointerEvents: 'none'
-        });
-        downloadFrame.src = button.href;
-        document.body.appendChild(downloadFrame);
-
-        window.clearTimeout(toastTimer);
-        toastTimer = window.setTimeout(() => toast.classList.remove('show'), 4500);
-        window.setTimeout(() => {
-            button.classList.remove('is-starting');
-            button.removeAttribute('aria-busy');
-        }, 2500);
-        window.setTimeout(() => downloadFrame.remove(), 60000);
-    });
-})();
-</script>
 <?php if ($adDisplayEnabled && (
     $adConfig['home_left_code'] !== ''
     || $adConfig['home_right_code'] !== ''
-    || $adConfig['home_download_code'] !== ''
     || $adConfig['home_bottom_code'] !== ''
 )): ?>
 <script>

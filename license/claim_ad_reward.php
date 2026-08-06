@@ -3,6 +3,7 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
 require_once __DIR__ . '/include/ad_helpers.php';
+require_once __DIR__ . '/include/member_auth.php';
 
 function reward_claim_response($status, $message, $extra = []) {
     echo json_encode(array_merge([
@@ -10,6 +11,17 @@ function reward_claim_response($status, $message, $extra = []) {
         'message' => $message,
     ], $extra), JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+function reward_clear_web_login() {
+    setcookie('vidoon_free_reward', '', [
+        'expires' => time() - 3600,
+        'path' => '/',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    member_logout_session();
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -31,6 +43,10 @@ if (!in_array($claimAction, ['start', 'claim'], true)) {
 }
 
 $conn = get_db_connection();
+$memberUser = member_current_user($conn);
+if (!$memberUser) {
+    reward_claim_response('error', 'member_login_required');
+}
 $config = get_ad_config($conn);
 if (!ad_reward_is_ready($config)) {
     reward_claim_response('error', 'free_reward_disabled');
@@ -41,7 +57,7 @@ $conn->begin_transaction();
 try {
     $stmt = $conn->prepare("
         SELECT *,
-               GREATEST(0, 5 - TIMESTAMPDIFF(SECOND, claim_started_at, NOW())) AS wait_remaining
+               GREATEST(0, 10 - TIMESTAMPDIFF(SECOND, claim_started_at, NOW())) AS wait_remaining
         FROM ad_reward_sessions
         WHERE reward_token_hash = ?
         LIMIT 1
@@ -53,10 +69,15 @@ try {
     if (!$session) {
         throw new RuntimeException('ad_reward_session_not_found');
     }
+    if (intval($session['user_id']) !== intval($memberUser['id'])) {
+        throw new RuntimeException('reward_account_mismatch');
+    }
     if ($session['status'] === 'granted') {
         $conn->commit();
+        reward_clear_web_login();
         reward_claim_response('ok', 'reward_already_granted', [
             'reward_count' => intval($session['reward_count']),
+            'web_login_cleared' => true,
         ]);
     }
     if ($session['status'] !== 'pending' || strtotime($session['expires_at']) < time()) {
@@ -101,11 +122,11 @@ try {
             ");
             $start->bind_param('i', $sessionId);
             $start->execute();
-            $session['wait_remaining'] = 5;
+            $session['wait_remaining'] = 10;
         }
-        $waitSeconds = max(0, intval($session['wait_remaining'] ?? 5));
+        $waitSeconds = max(0, intval($session['wait_remaining'] ?? 10));
         $conn->commit();
-        reward_claim_response('ok', 'free_reward_countdown_started', [
+        reward_claim_response('ok', 'free_reward_rule_check_started', [
             'wait_seconds' => $waitSeconds,
             'reward_count' => intval($session['reward_count']),
         ]);
@@ -113,25 +134,36 @@ try {
 
     $claimStartedAt = trim((string)($session['claim_started_at'] ?? ''));
     if ($claimStartedAt === '') {
-        throw new RuntimeException('free_reward_countdown_not_started');
+        throw new RuntimeException('free_reward_rule_check_not_started');
     }
     $waitRemaining = max(0, intval($session['wait_remaining'] ?? 0));
     if ($waitRemaining > 0) {
         $conn->commit();
-        reward_claim_response('wait', 'free_reward_countdown_active', [
+        reward_claim_response('wait', 'free_reward_rule_check_active', [
             'wait_seconds' => $waitRemaining,
         ]);
     }
 
-    if (ad_reward_today_claim_count($conn, $userId) >= intval($config['daily_view_limit'])) {
+    $dailyLimit = intval($config['daily_view_limit']);
+    if (
+        $dailyLimit > 0
+        && ad_reward_today_claim_count($conn, $userId) >= $dailyLimit
+    ) {
         throw new RuntimeException('ad_reward_daily_limit_reached');
     }
     $lastGrantedAt = ad_reward_last_granted_at($conn, $userId);
-    if (
-        $lastGrantedAt !== ''
-        && (time() - strtotime($lastGrantedAt)) < intval($config['cooldown_seconds'])
-    ) {
-        throw new RuntimeException('ad_reward_cooldown_active');
+    $cooldownRemaining = 0;
+    if ($lastGrantedAt !== '') {
+        $cooldownRemaining = max(
+            0,
+            intval($config['cooldown_seconds']) - (time() - strtotime($lastGrantedAt))
+        );
+    }
+    if ($cooldownRemaining > 0) {
+        $conn->commit();
+        reward_claim_response('error', 'ad_reward_cooldown_active', [
+            'cooldown_remaining' => $cooldownRemaining,
+        ]);
     }
 
     $rewardCount = intval($session['reward_count']);
@@ -174,13 +206,8 @@ try {
     reward_claim_response('error', $e->getMessage() ?: 'ad_reward_claim_failed');
 }
 
-setcookie('vidoon_free_reward', '', [
-    'expires' => time() - 3600,
-    'path' => '/',
-    'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-    'httponly' => true,
-    'samesite' => 'Lax',
-]);
+reward_clear_web_login();
 reward_claim_response('ok', 'reward_granted', [
     'reward_count' => $rewardCount,
+    'web_login_cleared' => true,
 ]);

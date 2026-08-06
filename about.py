@@ -320,7 +320,9 @@ class AboutPage(QWidget):
             self.lbl_account_level_about.setText("未登录")
             self.lbl_account_expire_about.setText("-")
             self.lbl_account_device_about.setText("-")
-            self.btn_ad_reward.setVisible(False)
+            self.btn_ad_reward.setVisible(
+                bool(auth_info.get("ad_reward_enabled", False))
+            )
 
     def open_ad_reward(self):
         if self.parent and hasattr(self.parent, "open_ad_reward"):

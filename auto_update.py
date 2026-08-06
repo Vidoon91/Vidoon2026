@@ -11,6 +11,7 @@ import tempfile
 import threading
 import time
 import urllib.request
+import urllib.error
 import webbrowser
 from datetime import datetime
 from urllib.parse import urlparse
@@ -237,6 +238,12 @@ class AutoUpdateManager(QObject):
     def version_url(self):
         return get_app_value("client.update.version_url", "")
 
+    def download_page_url(self):
+        return get_app_value(
+            "client.update.download_page_url",
+            "https://license.muyanshidai.com/index.php",
+        )
+
     def check_for_updates(self, silent=False):
         if not self.is_enabled():
             return
@@ -272,14 +279,24 @@ class AutoUpdateManager(QObject):
                     data = json.loads(response.read().decode("utf-8-sig"))
 
                 remote_version = data.get("version", "")
-                package_url = data.get("url", "")
                 effective_silent = self._current_check_silent
-                if remote_version and package_url and is_newer_version(remote_version):
+                if remote_version and is_newer_version(remote_version):
                     self.update_available.emit(data, effective_silent)
                 elif not effective_silent:
                     self.check_failed.emit("当前已是最新版本。", False)
             except Exception as exc:
-                self.check_failed.emit(str(exc), self._current_check_silent)
+                if isinstance(exc, urllib.error.HTTPError):
+                    if exc.code == 404:
+                        message = "官网版本接口不存在，请检查服务器 version.php 是否已上传。"
+                    else:
+                        message = f"官网版本服务返回错误（HTTP {exc.code}），请稍后重试。"
+                elif isinstance(exc, urllib.error.URLError):
+                    message = "无法连接官网版本服务，请检查网络后重试。"
+                elif isinstance(exc, (json.JSONDecodeError, UnicodeDecodeError)):
+                    message = "官网版本信息格式不正确，请检查后台版本设置。"
+                else:
+                    message = f"检查更新时发生异常：{exc}"
+                self.check_failed.emit(message, self._current_check_silent)
             finally:
                 self._checking = False
 
@@ -288,33 +305,26 @@ class AutoUpdateManager(QObject):
     def _handle_update_available(self, data, silent):
         remote_version = data.get("version", "")
         notes = data.get("notes", "")
-        package_url = data.get("url", "")
-
-        if silent:
-            self._log(f"发现新版本 {remote_version}，下载地址：{package_url}")
-            return
-
-        if not package_url:
-            QMessageBox.warning(self.parent, "发现新版本", "检查到新版本，但远程更新包地址为空。")
-            return
-
         message = f"发现新版本 {remote_version}，当前版本 {get_app_version()}。"
         if notes:
             message += f"\n\n更新内容：\n{notes}"
-        message += "\n\n软件不会自动更新覆盖。请点击“打开浏览器下载”，下载完成解压后，直接用新的！删除旧的！"
+        message += "\n\n软件不会自动更新覆盖。请点击“打开官网下载”，在官网选择下载方式。下载完成解压后，直接使用新版并删除旧版。"
 
         box = QMessageBox(self.parent)
         box.setWindowTitle("发现新版本")
         box.setIcon(QMessageBox.Information)
         box.setText(message)
-        open_button = box.addButton("打开浏览器下载", QMessageBox.AcceptRole)
+        open_button = box.addButton("打开官网下载", QMessageBox.AcceptRole)
         box.addButton("取消", QMessageBox.RejectRole)
         box.exec()
 
         if box.clickedButton() == open_button:
-            download_url = _browser_download_url(package_url)
-            webbrowser.open(download_url)
-            self._log(f"已打开浏览器下载更新包：{download_url}")
+            download_page_url = (
+                str(data.get("download_page_url", "") or "").strip()
+                or self.download_page_url()
+            )
+            webbrowser.open(download_page_url)
+            self._log(f"已打开官网软件下载页：{download_page_url}")
 
     def _handle_check_failed(self, message, silent):
         if silent:

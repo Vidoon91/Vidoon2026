@@ -26,8 +26,8 @@ $homeRightCode = trim((string)($_POST['home_right_code'] ?? ''));
 $homeDownloadCode = trim((string)($_POST['home_download_code'] ?? ''));
 $homeBottomCode = trim((string)($_POST['home_bottom_code'] ?? ''));
 $rewardCount = max(1, min(100, intval($_POST['reward_count'] ?? 3)));
-$dailyViewLimit = max(1, min(50, intval($_POST['daily_view_limit'] ?? 5)));
-$cooldownSeconds = max(30, min(86400, intval($_POST['cooldown_seconds'] ?? 120)));
+$dailyViewLimit = max(0, min(1000, intval($_POST['daily_view_limit'] ?? 0)));
+$cooldownSeconds = max(30, min(86400, intval($_POST['cooldown_seconds'] ?? 600)));
 
 if ($publisherId !== '' && !preg_match('/^ca-pub-\d{10,24}$/', $publisherId)) {
     header('Location: ad_settings.php?error=invalid_publisher_id');

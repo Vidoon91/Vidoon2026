@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/include/payment_helpers.php';
 require_once __DIR__ . '/include/ad_helpers.php';
+require_once __DIR__ . '/include/site_header.php';
 
 $conn = get_db_connection();
 $schemaError = null;
@@ -49,6 +50,7 @@ function subscribe_e($value) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light">
+<?php render_ad_publisher_loader($adConfig); ?>
 <title>Vidoon 订阅中心</title>
 <style>
 :root {
@@ -297,16 +299,7 @@ footer { border-top: 1px solid rgba(16,33,60,.10); padding: 22px 0 30px; color: 
 </style>
 </head>
 <body>
-<header class="shell topbar">
-    <a class="brand" href="index.php" title="返回首页">
-        <div class="brand-mark">V</div>
-        <div class="brand-copy">
-            <strong>Vidoon 订阅中心</strong>
-            <span>账号订阅与设备权益服务</span>
-        </div>
-    </a>
-    <div class="secure-note">安全支付 · 自动开通 · 到期透明</div>
-</header>
+<?php render_site_header('subscribe'); ?>
 
 <div class="page-ad-layout">
 <aside class="side-ad<?= !$adDisplayEnabled || trim((string)$adConfig['home_left_code']) === '' ? ' ad-empty' : '' ?>" aria-label="订阅页左侧广告">
@@ -341,16 +334,16 @@ footer { border-top: 1px solid rgba(16,33,60,.10); padding: 22px 0 30px; color: 
     <form action="create_payment_order.php" method="post" id="checkout-form">
         <input type="hidden" name="csrf" value="<?= subscribe_e($_SESSION['checkout_csrf']) ?>">
         <section class="plans" aria-label="订阅套餐">
-            <<?= $adRewardReady ? 'a' : 'div' ?> class="plan"<?= $adRewardReady ? ' href="reward.php"' : '' ?> style="text-decoration:none;color:inherit">
+            <<?= $adRewardReady ? 'a' : 'div' ?> class="plan"<?= $adRewardReady ? ' href="reward_watch.php"' : '' ?> style="text-decoration:none;color:inherit">
                 <div class="plan-code">FREE</div>
                 <div class="plan-name">免费订阅</div>
                 <div class="price"><strong style="font-size:31px">免费</strong></div>
                 <div class="duration">注册账号即可使用</div>
-                <p class="description"><?= $adRewardReady ? '通过指定激励广告免费获取下载次数' : '注册后可使用首次赠送的下载额度' ?></p>
+                <p class="description"><?= $adRewardReady ? '登录账号并核对领取规则后免费获取下载次数' : '注册后可使用首次赠送的下载额度' ?></p>
                 <div class="benefits">
                     <span>每次只下载 1 个视频</span>
                     <span>首次注册赠送 3 次下载额度</span>
-                    <span><?= $adRewardReady ? '用完可看广告免费领取' : '更多额度可选择付费订阅' ?></span>
+                    <span><?= $adRewardReady ? '用完可在官网免费领取' : '更多额度可选择付费订阅' ?></span>
                 </div>
             </<?= $adRewardReady ? 'a' : 'div' ?>>
             <?php foreach ($planRows as $index => $plan): ?>

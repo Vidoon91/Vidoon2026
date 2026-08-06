@@ -1,8 +1,11 @@
 <?php
 session_start();
 require_once __DIR__ . '/include/payment_helpers.php';
+require_once __DIR__ . '/include/ad_helpers.php';
+require_once __DIR__ . '/include/site_header.php';
 
 $conn = get_db_connection();
+$adConfig = get_ad_config($conn);
 $schemaError = null;
 ensure_payment_schema($conn, $schemaError);
 $orderNo = trim((string)($_GET['order_no'] ?? ''));
@@ -43,6 +46,7 @@ $error = trim((string)($_GET['error'] ?? ''));
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>人工付款确认 - Vidoon</title>
+<?php render_ad_publisher_loader($adConfig); ?>
 <style>
 :root{--ink:#10213c;--ocean:#0788ae;--muted:#708397;--line:#dbe7ec;--green:#0e9f73;--red:#d9485f}
 *{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:"Microsoft YaHei UI","Microsoft YaHei",sans-serif;background:radial-gradient(circle at 8% 5%,rgba(7,136,174,.16),transparent 27rem),linear-gradient(145deg,#f8fcfd,#edf6f8 60%,#fff7f2)}
@@ -57,8 +61,8 @@ label{display:block;margin-top:14px;color:#40586e;font-size:12px;font-weight:900
 </style>
 </head>
 <body>
+<?php render_site_header('subscribe'); ?>
 <main class="page">
-    <a class="brand" href="index.php" title="返回首页"><span class="mark">V</span>Vidoon 订阅中心</a>
     <h1 class="title">扫码付款并提交核对</h1>
     <p class="tip">这是人工收款订单。付款后需要管理员核对账单，确认无误后系统才会开通订阅。</p>
 

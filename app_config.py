@@ -49,7 +49,8 @@ DEFAULT_APP_SETTINGS = {
         "update": {
             "enabled": True,
             "check_on_start": True,
-            "version_url": "https://raw.githubusercontent.com/Vidoon91/vidoon-update/main/version.json",
+            "version_url": "https://license.muyanshidai.com/version.php",
+            "download_page_url": "https://license.muyanshidai.com/index.php",
         },
         "defaults": {
             "retry_count": 3,

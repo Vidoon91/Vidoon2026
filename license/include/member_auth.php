@@ -52,6 +52,7 @@ function member_current_user(mysqli $conn) {
 function member_safe_return($value, $default = 'reward.php') {
     $allowed = [
         'reward' => 'reward.php',
+        'reward_watch' => 'reward_watch.php',
         'subscribe' => 'subscribe.php',
         'home' => 'index.php',
     ];
@@ -60,7 +61,7 @@ function member_safe_return($value, $default = 'reward.php') {
 }
 
 function member_return_key($value, $default = 'reward') {
-    $allowed = ['reward', 'subscribe', 'home'];
+    $allowed = ['reward', 'reward_watch', 'subscribe', 'home'];
     $key = strtolower(trim((string)$value));
     return in_array($key, $allowed, true) ? $key : $default;
 }

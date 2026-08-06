@@ -959,7 +959,7 @@ class VideoDownloader(QMainWindow):
         self._start_timers()
         self._initial_check_tools_and_cookie()
         QTimer.singleShot(300, self._load_public_config)
-        QTimer.singleShot(500, self._start_authorization_check)
+        QTimer.singleShot(500, lambda: self._start_authorization_check(force_refresh=True))
         self.update_manager = AutoUpdateManager(self, self.log_handler)
         if get_app_value("client.update.check_on_start", True):
             QTimer.singleShot(1800, lambda: self.update_manager.check_for_updates(silent=True))
@@ -2089,6 +2089,7 @@ class VideoDownloader(QMainWindow):
             self.page_batch_extract.update_cookie_status_display()
         elif page_index == 7:
             self._refresh_about_page()
+            self._start_authorization_check(force_refresh=True)
         elif page_index == 8:
             self._update_log_info()
 
@@ -2288,7 +2289,7 @@ class VideoDownloader(QMainWindow):
 
     def _is_ad_reward_account_eligible(self):
         if not self.authorized:
-            return False
+            return True
         account = self.account_info or load_auth_data()
         account_level = str(account.get("account_level", "free")).strip().lower()
         return account_level in ("free", "trial")
@@ -2296,12 +2297,7 @@ class VideoDownloader(QMainWindow):
     def _update_ad_reward_visibility(self):
         top_button = getattr(self, "btn_ad_reward_top", None)
         if top_button is not None:
-            top_button.setVisible(
-                bool(
-                    self._ad_reward_enabled
-                    and self._is_ad_reward_account_eligible()
-                )
-            )
+            top_button.setVisible(bool(self._ad_reward_enabled))
 
     def _open_resolved_website(self, result):
         self.btn_website.setEnabled(True)
@@ -2318,32 +2314,13 @@ class VideoDownloader(QMainWindow):
             self.log_handler.log(f"打开官网失败：{exc}")
 
     def open_ad_reward(self):
-        """Create a one-time reward session and open it in the browser."""
-        if not self._ad_reward_enabled:
-            QMessageBox.information(
-                self,
-                "免费次数",
-                "免费领取功能暂未开放，请使用首次赠送额度或选择付费订阅套餐。",
-            )
-            return
-        if not self.authorized:
-            QMessageBox.information(self, "免费次数", "请先登录账号，再领取免费下载额度。")
-            return
-        if not self._is_ad_reward_account_eligible():
-            QMessageBox.information(
-                self,
-                "免费次数",
-                "有效付费订阅用户不能参加免费额度领取。订阅到期并回归免费订阅后可再次参加。",
-            )
-            return
-        self._set_ad_reward_controls(False, "正在申请...")
-
-        def worker():
-            result = create_ad_reward_session(timeout=20)
-            result["event"] = "created"
-            self.signals.ad_reward_result_signal.emit(result)
-
-        threading.Thread(target=worker, daemon=True).start()
+        """Open the public homepage without sending client account state."""
+        reward_home_url = "https://license.muyanshidai.com/index.php"
+        try:
+            webbrowser.open(reward_home_url)
+            self.log_handler.log(f"已打开官网免费额度入口：{reward_home_url}")
+        except Exception as exc:
+            QMessageBox.warning(self, "免费次数", f"无法打开官网领取页面：{exc}")
 
     def _poll_ad_reward_status(self):
         if self._ad_reward_polling or not self._ad_reward_token:
@@ -2422,7 +2399,7 @@ class VideoDownloader(QMainWindow):
             self._ad_reward_timer.start(2500)
             self._poll_ad_reward_status()
             self.log_handler.log(
-                f"已打开激励奖励页面，完成积分墙广告后可领取 {result.get('reward_count', 3)} 次"
+                f"已打开旧版免费额度页面，可领取 {result.get('reward_count', 3)} 次"
             )
             return
 

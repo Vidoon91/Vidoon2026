@@ -1,7 +1,10 @@
 <?php
 require_once __DIR__ . '/include/payment_helpers.php';
+require_once __DIR__ . '/include/ad_helpers.php';
+require_once __DIR__ . '/include/site_header.php';
 
 $conn = get_db_connection();
+$adConfig = get_ad_config($conn);
 $schemaError = null;
 ensure_payment_schema($conn, $schemaError);
 $orderNo = trim((string)($_GET['order_no'] ?? ''));
@@ -21,11 +24,13 @@ $maskedEmail = preg_replace('/^(.{2}).*(@.*)$/u', '$1***$2', $order['user_email'
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>订单支付</title>
+<?php render_ad_publisher_loader($adConfig); ?>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>body{font-family:"Microsoft YaHei UI","Microsoft YaHei",sans-serif;background:linear-gradient(145deg,#eff8fa,#fff7f2)}#qrcode img{margin:auto}</style>
 </head>
 <body class="min-h-screen text-slate-800">
+<?php render_site_header('subscribe'); ?>
 <main class="mx-auto flex min-h-screen max-w-xl items-center px-5 py-10">
     <section class="w-full rounded-[32px] bg-white p-7 text-center shadow-2xl shadow-slate-300/60 ring-1 ring-slate-200">
         <a href="index.php" title="返回首页" class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-[#2867ad] via-[#173f72] to-[#0c203c] text-xl font-black text-white shadow-lg shadow-blue-900/20">V</a>

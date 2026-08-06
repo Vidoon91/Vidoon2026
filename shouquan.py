@@ -930,15 +930,11 @@ class AuthCacheManager:
 def ensure_authorized(force_refresh=False):
     auth_cache = AuthCacheManager()
 
-    if force_refresh:
-        auth_cache.force_refresh()
-
-    cached_auth = auth_cache.get_cached_auth()
-    if cached_auth and not force_refresh:
-        return cached_auth
-
     auth_data = load_auth_data()
     if auth_data.get("token"):
+        cached_auth = auth_cache.get_cached_auth()
+        if cached_auth and not force_refresh:
+            return cached_auth
         result = validate_account_session()
         if result.get("status") == "network_error":
             offline_auth = auth_cache.get_offline_fallback_auth()

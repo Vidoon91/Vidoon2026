@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/include/ad_helpers.php';
 require_once __DIR__ . '/include/member_auth.php';
+require_once __DIR__ . '/include/site_header.php';
 
 $conn = get_db_connection();
 $adConfig = get_ad_config($conn);
@@ -14,6 +15,7 @@ $returnUrl = member_safe_return($returnKey, 'subscribe.php');
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light">
+<?php render_ad_publisher_loader($adConfig); ?>
 <meta name="description" content="注册 Vidoon 会员账号，注册后可直接登录客户端并购买订阅套餐。">
 <title>Vidoon 会员注册</title>
 <style>
@@ -42,17 +44,17 @@ button, input { font: inherit; }
 a { color: inherit; text-decoration: none; }
 .shell { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
 .page-ad-layout {
-    width: min(1736px, calc(100% - 24px));
+    width: min(1480px, calc(100% - 24px));
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 280px minmax(0, 1080px) 280px;
-    gap: 48px;
+    grid-template-columns: minmax(180px, 260px) minmax(0, 820px) minmax(180px, 260px);
+    gap: clamp(24px, 3vw, 48px);
     align-items: start;
 }
 .page-ad-layout .page { width: 100%; }
 .side-ad {
     position: relative;
-    width: 280px;
+    width: 100%;
     min-height: 600px;
     margin-top: 50px;
     overflow: hidden;
@@ -61,7 +63,8 @@ a { color: inherit; text-decoration: none; }
     background: rgba(255,255,255,.74);
     padding: 12px;
 }
-.side-ad::before {
+.side-ad::before,
+.flow-bottom-ad::before {
     content: "广告";
     position: absolute;
     top: 7px;
@@ -70,8 +73,20 @@ a { color: inherit; text-decoration: none; }
     font-size: 10px;
 }
 .side-ad .adsbygoogle { display: block !important; width: 100% !important; min-height: 560px; }
-.side-ad.ad-empty { visibility: hidden; }
-.side-ad.unfilled { visibility: hidden; }
+.flow-bottom-ad {
+    position: relative;
+    width: min(1080px, calc(100% - 32px));
+    min-height: 110px;
+    margin: 12px auto 48px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(255,255,255,.74);
+    padding: 12px;
+}
+.flow-bottom-ad .adsbygoogle { display: block !important; width: 100% !important; min-height: 80px; }
+.flow-ad.ad-empty { visibility: hidden; }
+.flow-ad.unfilled { visibility: hidden; }
 .topbar {
     display: flex;
     align-items: center;
@@ -167,7 +182,12 @@ a { color: inherit; text-decoration: none; }
     .benefits { width: max-content; max-width: 100%; margin-inline: auto; text-align: left; }
 }
 @media (max-width: 1500px) {
-    .page-ad-layout { width: min(1080px, calc(100% - 32px)); grid-template-columns: minmax(0, 1fr); }
+    .page { grid-template-columns: 1fr; gap: 35px; padding-top: 36px; }
+    .intro { text-align: center; }
+    .benefits { width: max-content; max-width: 100%; margin-inline: auto; text-align: left; }
+}
+@media (max-width: 1180px) {
+    .page-ad-layout { width: min(820px, calc(100% - 32px)); grid-template-columns: minmax(0, 1fr); }
     .side-ad { display: none; }
 }
 @media (max-width: 520px) {
@@ -182,16 +202,10 @@ a { color: inherit; text-decoration: none; }
 </style>
 </head>
 <body>
-<header class="shell topbar">
-    <a class="brand" href="index.php">
-        <span class="mark">V</span>
-        <span>Vidoon<small>VIDEO WORKSPACE</small></span>
-    </a>
-    <a class="back" href="index.php">返回首页</a>
-</header>
+<?php render_site_header('register'); ?>
 
 <div class="page-ad-layout">
-<aside class="side-ad<?= !$adDisplayEnabled || trim((string)$adConfig['home_left_code']) === '' ? ' ad-empty' : '' ?>" aria-label="注册页左侧广告">
+<aside class="flow-ad side-ad<?= !$adDisplayEnabled || trim((string)$adConfig['home_left_code']) === '' ? ' ad-empty' : '' ?>" aria-label="注册页左侧广告">
     <?php if ($adDisplayEnabled) { echo $adConfig['home_left_code']; } ?>
 </aside>
 <main class="page">
@@ -229,17 +243,20 @@ a { color: inherit; text-decoration: none; }
                 <label for="confirm-password">确认密码</label>
                 <input id="confirm-password" type="password" autocomplete="new-password" minlength="6" placeholder="再次输入密码" required>
             </div>
-            <button class="submit" id="submit" type="submit"><?= $returnKey === 'reward' ? '注册并领取免费额度' : '注册并选择订阅套餐' ?></button>
+            <button class="submit" id="submit" type="submit"><?= in_array($returnKey, ['reward', 'reward_watch'], true) ? '注册并领取免费额度' : '注册并选择订阅套餐' ?></button>
             <div class="message" id="message" role="status" aria-live="polite"></div>
             <p class="fine-print">注册即表示你同意使用该邮箱接收验证码、订单和账号安全通知。</p>
             <p class="fine-print">已经注册？<a href="member_login.php?return=<?= htmlspecialchars($returnKey, ENT_QUOTES, 'UTF-8') ?>" style="color:var(--ocean);font-weight:900">直接登录</a></p>
         </form>
     </section>
 </main>
-<aside class="side-ad<?= !$adDisplayEnabled || trim((string)$adConfig['home_right_code']) === '' ? ' ad-empty' : '' ?>" aria-label="注册页右侧广告">
+<aside class="flow-ad side-ad<?= !$adDisplayEnabled || trim((string)$adConfig['home_right_code']) === '' ? ' ad-empty' : '' ?>" aria-label="注册页右侧广告">
     <?php if ($adDisplayEnabled) { echo $adConfig['home_right_code']; } ?>
 </aside>
 </div>
+<aside class="flow-ad flow-bottom-ad<?= !$adDisplayEnabled || trim((string)$adConfig['home_bottom_code']) === '' ? ' ad-empty' : '' ?>" aria-label="注册页底部广告">
+    <?php if ($adDisplayEnabled) { echo $adConfig['home_bottom_code']; } ?>
+</aside>
 
 <script>
 const form = document.getElementById('register-form');
@@ -268,7 +285,7 @@ const messages = {
     verification_code_expired: '验证码已过期，请重新获取。',
     verification_code_attempts_exceeded: '验证码错误次数过多，请重新获取。',
     verification_code_already_used: '验证码已经使用，请重新获取。',
-    register_success: returnKey === 'reward' ? '注册成功，正在进入免费额度页面。' : '注册成功，正在进入订阅中心。',
+    register_success: ['reward', 'reward_watch'].includes(returnKey) ? '注册成功，正在进入免费额度页面。' : '注册成功，正在进入订阅中心。',
     register_failed: '注册失败，请稍后重试。'
 };
 
@@ -378,7 +395,7 @@ form.addEventListener('submit', async (event) => {
         });
         showMessage(messages.register_success, 'success');
         window.setTimeout(() => {
-            if (returnKey === 'reward') {
+            if (['reward', 'reward_watch'].includes(returnKey)) {
                 window.location.href = returnUrl;
                 return;
             }
@@ -386,17 +403,17 @@ form.addEventListener('submit', async (event) => {
         }, 700);
     } catch (error) {
         submitButton.disabled = false;
-        submitButton.textContent = returnKey === 'reward' ? '注册并领取免费额度' : '注册并选择订阅套餐';
+        submitButton.textContent = ['reward', 'reward_watch'].includes(returnKey) ? '注册并领取免费额度' : '注册并选择订阅套餐';
         showMessage(error.message, 'error');
     }
 });
 </script>
-<?php if ($adDisplayEnabled && ($adConfig['home_left_code'] !== '' || $adConfig['home_right_code'] !== '')): ?>
+<?php if ($adDisplayEnabled && ($adConfig['home_left_code'] !== '' || $adConfig['home_right_code'] !== '' || $adConfig['home_bottom_code'] !== '')): ?>
 <script>
 window.setTimeout(() => {
-    document.querySelectorAll('.side-ad .adsbygoogle').forEach(ad => {
+    document.querySelectorAll('.flow-ad .adsbygoogle').forEach(ad => {
         if (ad.getAttribute('data-ad-status') === 'unfilled') {
-            ad.closest('.side-ad')?.classList.add('unfilled');
+            ad.closest('.flow-ad')?.classList.add('unfilled');
         }
     });
 }, 8000);
